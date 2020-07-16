@@ -6,9 +6,14 @@ from distutils.core import setup
 from os.path import exists, isdir, join
 import shutil
 
+import semantic_version
 import py2exe
 
 from semvertest import appname as APPNAME, applongname as APPLONGNAME, appversion as VERSION, copyright as COPYRIGHT
+
+# Split version, as py2exe wants the 'base' for version
+semver = semantic_version.Version(VERSION)
+BASEVERSION = str(semver.truncate('patch'))
 
 dist_dir = 'dist.win32'
 
@@ -42,7 +47,8 @@ setup(
         'script': APP,
         'company_name': 'EDCD',
         'product_name': APPNAME,
-        'version': VERSION,
+        'version': BASEVERSION,
+        'product_version': VERSION,
         'copyright': COPYRIGHT,
     }],
     data_files = DATA_FILES,

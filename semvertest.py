@@ -9,7 +9,7 @@ import argparse
 
 appname = 'SemVerTest'
 applongname = 'Semantic Version Test'
-appversion = "1.0.0.0'
+appversion = '1.0.0-beta1'
 copyright = '© Athanasius 2020'
 
 def main() -> None:
