@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<?define PRODUCTNAME = "SemVerTest"?>
+<?define PRODUCTLONGNAME = "Semantic Version Test"?>
+<?define PRODUCTVERSION = "!(bind.fileVersion.SemVerTest.exe)" ?>
+<?define UPGRADECODE = "af7d6ef1-bc76-c6ab-7287-7abc84d9eec6" ?>
+
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="*"
+		Name="$(var.PRODUCTLONGNAME)"
+		Version="$(var.PRODUCTVERSION)"
+		UpgradeCode="$(var.UPGRADECODE)"
+		Language="!(bind.fileLanguage.SemVerTest.exe)"
+		Manufacturer="EDCD">
+
+        	<Package Id="*" Keywords="Installer"
+        		InstallScope="perMachine"
+        		Description="$(var.PRODUCTLONGNAME) installer"
+        		InstallerVersion="300" Compressed="yes"
+        		Platform="x86"
+        		Languages="1033,0" />
+        	
+        	<!-- Always reinstall since patching is problematic -->
+        	<!-- http://www.joyofsetup.com/2010/01/16/major-upgrades-now-easier-than-ever/ -->
+        	<MajorUpgrade AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+        
+        	<Media Id="1" Cabinet="product.cab" EmbedCab="yes" />
+        
+        	<!-- For Add/Remove programs -->
+        	<Property Id="ARPPRODUCTICON" Value="SemVerTest.exe" />
+        	<Property Id="ARPNOMODIFY" Value="yes" Secure="yes" />  <!-- Remove modify - also set by WixUI_Minimal -->
+        	
+        	<!-- Set INSTALLDIR from ARPINSTALLLOCATION if replacing/upgrading -->
+        	<!-- https://wyrdfish.wordpress.com/2012/07/20/msi-writing-guidelines-this-may-be-out-of-date/ -->
+        	<Property Id="ARPINSTALLLOCATION">
+        		<RegistrySearch Id="GetARPINSTALLLOCATION"
+        			Root="HKLM"
+        			Key="Software\Microsoft\Windows\CurrentVersion\Uninstall\[WIX_UPGRADE_DETECTED]"
+        			Name="InstallLocation"
+        			Type="raw" />
+        	</Property>
+        	<CustomAction Id="SetINSTALLDIR" Property="INSTALLDIR" Value="[ARPINSTALLLOCATION]" />
+        	<InstallUISequence>
+        		<Custom Action="SetINSTALLDIR" After="AppSearch">
+        			WIX_UPGRADE_DETECTED AND ARPINSTALLLOCATION
+        		</Custom>
+        	</InstallUISequence>
+        	<InstallExecuteSequence>
+        		<Custom Action="SetINSTALLDIR" After="AppSearch">
+        			WIX_UPGRADE_DETECTED AND ARPINSTALLLOCATION
+        		</Custom>
+        	</InstallExecuteSequence>
+        	
+        	<!-- Set ARPINSTALLLOCATION from INSTALLDIR if new install -->
+        	<!-- http://blogs.technet.com/b/alexshev/archive/2008/02/09/from-msi-to-wix-part-2.aspx -->
+        	<CustomAction Id="SetARPINSTALLLOCATION" Property="ARPINSTALLLOCATION" Value="[INSTALLDIR]" />
+        	<InstallExecuteSequence>
+        		<Custom Action="SetARPINSTALLLOCATION" After="InstallValidate">
+        			NOT Installed
+        		</Custom>
+        	</InstallExecuteSequence>
+        	
+        	<Directory Id="TARGETDIR" Name="SourceDir">
+                        <!-- http://wixtoolset.org/documentation/manual/v3/howtos/files_and_registry/write_a_registry_entry.html -->
+                        <Component Id="RegistryEntries" Guid="*">
+                                <RegistryKey Root="HKCR" Key="edmc">
+                                        <RegistryValue Type="string" Value="$(var.PRODUCTLONGNAME)"/>
+                                        <RegistryValue Type="string" Name="URL Protocol" Value=""/>
+                                        <RegistryKey Key="shell">
+                                                <RegistryKey Key="open">
+                                                        <RegistryKey Key="command">
+                                                                <RegistryValue Type="string" Value='"[INSTALLDIR]SemVerTest.exe" "%1"'/>
+                                                        </RegistryKey>
+                                                        <RegistryKey Key="ddeexec">
+                                                                <RegistryValue Type="string" Value='Open("%1")'/>
+                                                        </RegistryKey>
+                                                </RegistryKey>
+                                        </RegistryKey>
+                                </RegistryKey>
+                        </Component>
+        
+                        <!-- Generate with `heat.exe dir dist.win32 -ag -sfrag -suid -out foo.wxs` -->
+                        <!-- Sadly too late for auto-generated Component UUIDs -->
+                        <Directory Id="ProgramFilesFolder">
+                                <Directory Id="INSTALLDIR" Name="$(var.PRODUCTNAME)">
+                                        <Component Id="MainExecutable" Guid="*">
+                                                <File Id="SemVerTest.exe" KeyPath="yes" Source="SourceDir\SemVerTest.exe" />
+                                                <Shortcut Id="MainExeShortcut" Directory="ProgramMenuFolder" Name="$(var.PRODUCTLONGNAME)" Description="Semantic Version Testbed" WorkingDirectory="INSTALLDIR" Advertise="yes" />
+                                        </Component>
+                                        <Component Guid="*">
+                                                <File KeyPath="yes" Source="SourceDir\_bz2.pyd" />
+                                        </Component>
+                                        <Component Guid="*">
+                                                <File KeyPath="yes" Source="SourceDir\_ctypes.pyd" />
+                                        </Component>
+                                        <Component Guid="*">
+                                                <File KeyPath="yes" Source="SourceDir\_hashlib.pyd" />
+                                        </Component>
+                                        <Component Guid="*">
+                                                <File KeyPath="yes" Source="SourceDir\_lzma.pyd" />
+                                        </Component>
+                                        <Component Guid="*">
+                                                <File KeyPath="yes" Source="SourceDir\_socket.pyd" />
+                                        </Component>
+                                        <Component Guid="*">
+                                                <File KeyPath="yes" Source="SourceDir\_ssl.pyd" />
+                                        </Component>
+                                        <Component Guid="*">
+                                                <File KeyPath="yes" Source="SourceDir\libcrypto-1_1.dll" />
+                                        </Component>
+                                        <Component Guid="*">
+                                                <File KeyPath="yes" Source="SourceDir\library.zip" />
+                                        </Component>
+                                        <Component Guid="*">
+                                                <File KeyPath="yes" Source="SourceDir\libssl-1_1.dll" />
+                                        </Component>
+                                        <Component Guid="*">
+                                                <File KeyPath="yes" Source="SourceDir\pyexpat.pyd" />
+                                        </Component>
+                                        <Component Guid="*">
+                                                <File KeyPath="yes" Source="SourceDir\python37.dll" />
+                                        </Component>
+                                        <Component Guid="*">
+                                                <File KeyPath="yes" Source="SourceDir\select.pyd" />
+                                        </Component>
+                                        <Component Guid="*">
+                                                <File KeyPath="yes" Source="SourceDir\unicodedata.pyd" />
+                                        </Component>
+                                        <Component Guid="*">
+                                                <File KeyPath="yes" Source="SourceDir\WinSparkle.dll" />
+                                        </Component>
+                                </Directory>
+                        </Directory>
+        
+                        <Directory Id="ProgramMenuFolder" Name="Programs">
+                        </Directory>
+        
+                </Directory>
+        
+                <Feature Id='Complete' Level='1'>
+                        <ComponentRef Id="RegistryEntries" />
+                        <ComponentRef Id="MainExecutable" />
+                        <ComponentRef Id="_bz2.pyd" />
+                        <ComponentRef Id="_ctypes.pyd" />
+                        <ComponentRef Id="_hashlib.pyd" />
+                        <ComponentRef Id="_lzma.pyd" />
+                        <ComponentRef Id="_socket.pyd" />
+                        <ComponentRef Id="_ssl.pyd" />
+                        <ComponentRef Id="libcrypto_1_1.dll" />
+                        <ComponentRef Id="library.zip" />
+                        <ComponentRef Id="libssl_1_1.dll" />
+                        <ComponentRef Id="pyexpat.pyd" />
+                        <ComponentRef Id="python37.dll" />
+                        <ComponentRef Id="select.pyd" />
+                        <ComponentRef Id="unicodedata.pyd" />
+                        <ComponentRef Id="WinSparkle.dll" />
+                </Feature>
+        
+        </Product>
+</Wix>
+
+<!-- Local Variables: -->
+<!-- tab-width: 4     -->
+<!-- End:             -->
+
+
+

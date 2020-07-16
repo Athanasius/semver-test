@@ -1,0 +1,6 @@
+__pycache__/
+.*.sw?
+*_win_*.msi
+WinSparkle.dll
+WinSparkle.pdb
+dist.win32/
