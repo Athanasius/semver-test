@@ -9,7 +9,6 @@ builtins = _
 # check syntax in doctests
 doctests = True 
 max-complexity = 15
-per-file-ignores = ./EDMC.py:E402
 
 # Plugin configs
 # required plugins:
