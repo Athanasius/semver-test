@@ -2,14 +2,22 @@
 
 <?define PRODUCTNAME = "SemVerTest"?>
 <?define PRODUCTLONGNAME = "Semantic Version Test"?>
-<?define PRODUCTVERSION = "!(bind.fileVersion.SemVerTest.exe)" ?>
-<?define UPGRADECODE = "af7d6ef1-bc76-c6ab-7287-7abc84d9eec6" ?>
+<?define MajorVersion = "!(bind.property.ProductVersion.Major)" ?>
+<?define MinorVersion = "!(bind.property.ProductVersion.Minor)" ?>
+<?define BuildVersion = "!(bind.property.ProductVersion.Build)" ?>
+<?define Revision = "0" ?>
+<?define VersionNumber = "$(var.MajorVersion).$(var.MinorVersion).$(var.BuildVersion).$(var.Revision)" ?>
+<?define UPGRADECODE = "BE85448E-F52B-46E5-9A4E-7237E1679C5C" ?>
 
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<!--
+	  You cannot use !bind.property elements in the *attributes*, i.e.
+	'Version' of <Product>
+	-->
 	<Product Id="*"
 		Name="$(var.PRODUCTLONGNAME)"
-		Version="$(var.PRODUCTVERSION)"
 		UpgradeCode="$(var.UPGRADECODE)"
+		Version="!(bind.fileVersion.SemVerTest.exe)"
 		Language="!(bind.fileLanguage.SemVerTest.exe)"
 		Manufacturer="EDCD">
 
@@ -80,7 +88,6 @@
                         </Component>
         
                         <!-- Generate with `heat.exe dir dist.win32 -ag -sfrag -suid -out foo.wxs` -->
-                        <!-- Sadly too late for auto-generated Component UUIDs -->
                         <Directory Id="ProgramFilesFolder">
                                 <Directory Id="INSTALLDIR" Name="$(var.PRODUCTNAME)">
                                         <Component Id="MainExecutable" Guid="*">
