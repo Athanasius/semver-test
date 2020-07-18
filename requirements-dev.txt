@@ -1,0 +1,6 @@
+flake8
+flake8-cognitive-complexity
+flake8-pep3101
+flake8-comprehensions
+pep8-naming
+flake8-annotations-coverage
