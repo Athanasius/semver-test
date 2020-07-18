@@ -1,0 +1,168 @@
+- Aims =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+Terminology
+	In A.B.C.D
+		A = Major Version
+		B = Minor Version
+		C = Patch Version
+		D = Revision Version
+
+We want to be able to clearly signal whether an application version is a
+stable release or a pre-release (beta).
+
+We could do, e.g.
+
+	4.0.0 - stable
+	4.0.1 - hotfix to 4.0.0
+	4.1.0 - pre-release series for 4.2.0
+	4.2.0 - next stable
+
+But then what do we do for a pre-release to 5.b.c series?  It could just
+be whatever the next odd Minor number is of course, it doesn't *need* to
+signal that we'll bump Major when it becomes a stable release.
+
+Or we can try to support full Semantic Version syntax:
+
+	A.B.C-<pre-release>+<build>
+
+Such that:
+
+	1) 1.1.0 and 1.0.1 are bother considered larger than 1.0.0
+
+		This means that either 1.0.1 or 1.1.0 will replace an
+		installed 1.0.0.
+
+	This already works.
+
+	2) 1.1.0-beta0 is considered SMALLER than 1.1.0.
+
+		This means that a 1.1.0 will replace an installed
+		1.1.0-beta0.  But not vice versa.
+
+	WiX (build of .msi file) only supports A.B.C(.D)
+		which means that the .msi file will only have A.B.C(.D)
+		which means that msiexec will only see A.B.C(.D)
+		which means that Windows will only see A.B.C(.D)
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+SemVar is only A.B.C-local+build
+
+py2exe wants only A.B.C or A.B.C.D for 'version', which ends up in .exe
+'File version'
+	So we use:
+
+	semver = semantic_version.Version.coerce(VERSION)
+	BASEVERSION = str(semver.truncate('patch'))
+
+	for A.B.C, which will end up as 'A.B.C.0' in 'File version'.
+
+py2exe 'product_version' ends up in .exe 'Product version'
+
+.wxs
+	!(bind.fileVersion.SemVerTest.exe)
+		The 'File version' from the .exe
+
+	You can't use:
+
+		Version="!(bind.property.ProductVersion)"
+
+	because you can't use bind.property values in the attributes of
+	the <Product> element.
+
+		<https://wixtoolset.org/documentation/manual/v3/overview/light.html>
+
+--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<
+You can also reference property values from the Property table at bind
+time; however, you cannot reference properties as binder variables
+within other properties, including the attributes on the Product
+element...
+--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<--8<
+
+- WinSparkle =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+<https://github.com/vslavik/winsparkle/blob/master/include/winsparkle.h>
+	@param app_version   Version of the app, as string (e.g. "1.2" or "1.2rc1").
+
+<https://github.com/vslavik/winsparkle/issues/214>
+The way that SplitVersionString <https://github.com/vslavik/winsparkle/blob/master/src/updatechecker.cpp#L75-L77>
+works naturally supports the 'pre-release' segment, just due to how it
+splits the string.
+
+But it also treats build metadata as part of the version for comparison
+purposes, which it shouldn't.  Solution is this:
+
+            appversion_nobuildmetadata = appversion.split(sep='+')[0]
+            print('Version used for WinSparkle: {}'.format(appversion_nobuildmetadata))
+            self.updater.win_sparkle_set_app_build_version(appversion_nobuildmetadata)
+
+So. e.g.:
+
+Documents\Devel\semver-test\dist.win32>SemVerTest.exe
+Version: 1.2.3-beta5+build6
+Version used for WinSparkle: 1.2.3-beta5
+- In SemVerTest -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+semvertest.py: appversion
+gets imported into setup.py as VERSION
+gets used in setup.py setup() windows and console arrays.
+
+We can use BASEVERSION for this, and still put full SemVer into
+Product Version.
+
+appversion = '1.2.3.4-beta5+build6'
+	File version		1.2.3.0
+	Product version		1.2.3.4-beta5+build6
+
+	Builds:
+		SemVerTest_win_1.2.3.4-beta5+build6.msi
+	Installs:
+		No errors, shows as 1.2.3.0 in Windows > Apps
+
+appversion = '1.2.3-beta5+build6'
+	appversion  is: 1.2.3-beta5+build6
+	semver      is: 1.2.3-beta5+build6
+	BASEVERSION is: 1.2.3
+
+	File version		1.2.3.0
+	Product version		1.2.3-beta5+build6
+
+	Builds:
+		SemVerTest_win_1.2.3-beta5+build6.msi
+	Installs:
+		No errors, shows as 1.2.3.0 in Windows > Apps
+		Also installed over SemVerTest_win_1.2.3.4-beta5+build6.msi
+		Also installed over SemVerTest_win_1.2.3.msi
+			PROBLEM
+
+appversion = '1.2.3'
+	appversion  is: 1.2.3
+	semver      is: 1.2.3
+	BASEVERSION is: 1.2.3
+
+	File version		1.2.3.0
+	Product version		1.2.3
+
+	Builds:
+		SemVerTest_win_1.2.3.msi
+	Installs:
+		Also installed over SemVerTest_win_1.2.3-beta5+build6.msi
+
+
+So, we need some sort of custom action in .wxs file:
+
+	1) Compare if these are equal:
+		bind.fileVersion.SemVerTest.exe
+		bind.property.ProductVersion
+	2) If they are, proceed (upgrade same version in place).
+	3) If they are not:
+		i) Truncate ProductVersion at first '-'.
+		ii) Compare truncated with fileVersion
+		iii) If ProductVersion > fileVersion -> install
+		  else do not, because e.g. 1.2.3-beta0 should not
+		  install over 1.2.3
+- In EDMC -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+config.py: appversion
+gets imported into setup.py as APPVERSION
+gets used in setup.py setup() windows and console arrays.
+
+We can use BASEVERSION for this, and still put full SemVer into
+Product Version.
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
