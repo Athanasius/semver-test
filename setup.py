@@ -12,8 +12,11 @@ import py2exe
 from semvertest import appname as APPNAME, applongname as APPLONGNAME, appversion as VERSION, copyright as COPYRIGHT
 
 # Split version, as py2exe wants the 'base' for version
-semver = semantic_version.Version(VERSION)
+print('appversion  is: {}'.format(VERSION))
+semver = semantic_version.Version.coerce(VERSION)
+print('semver      is: {}'.format(semver))
 BASEVERSION = str(semver.truncate('patch'))
+print('BASEVERSION is: {}'.format(BASEVERSION))
 
 dist_dir = 'dist.win32'
 
