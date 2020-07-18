@@ -47,17 +47,17 @@ class Updater(object):
             self.updater = None
             raise
 
-    def shutdown_request(self):
+    def shutdown_request(self) -> None:
         print('WinSparkle requested shutdown')
         exit()
 
-    def check_for_updates(self):
+    def check_for_updates(self) -> None:
         if self.updater:
             self.updater.win_sparkle_check_update_with_ui()
         else:
             print('check_for_updates(): No updater')
 
-    def close(self):
+    def close(self) -> None:
         if self.updater:
             self.updater.win_sparkle_cleanup()
         self.updater = None
